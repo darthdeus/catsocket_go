@@ -7,26 +7,39 @@ type Client struct {
 	out chan int
 }
 
-func Poll(in <-chan int, out chan int) {
+type Terminator struct {
+	done    chan bool
+	blocker chan string
+}
 
-  select {
-  case item := <-in:
-    out <- item
-  case <-time.After(20 * time.Millisecond):
-    out <- 0
-  }
+func NewTerminator() Terminator {
+	return Terminator{make(chan bool), make(chan string)}
+}
+
+func Poll(in chan int, out chan int, term Terminator) {
+	for {
+		select {
+		case item := <-in:
+			out <- item
+		case <-time.After(20 * time.Millisecond):
+			out <- 0
+		case <-term.done:
+			term.blocker <- "john"
+			return
+		}
+	}
 }
 
 func main() {
-	data := make(chan int, 2)
+	data := make(chan int)
 	out := make(chan int)
 
-	go Poll(data, out)
+	term := NewTerminator()
 
-	time.Sleep(500 * time.Millisecond)
+	go Poll(data, out, term)
 
-	data <- 1
-	data <- 1
+	term.done <- true
 
-	println(<-out)
+	println(<-term.blocker)
+
 }
