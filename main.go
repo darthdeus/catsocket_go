@@ -1,25 +1,42 @@
 package main
 
 import (
-  "fmt"
-  "net/http"
-  "io"
-  "log"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"time"
 )
 
-func Handler(w http.ResponseWriter, req *http.Request) {
-  io.WriteString(w, "hello world\n")
+func CreateGetHandler(in chan string) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		io.WriteString(w, <-in)
+	}
+}
+
+func PushData(in chan<- string) {
+	for {
+		time.Sleep(time.Second)
+		in <- "randomness"
+	}
 }
 
 const PORT = 5000
 
 func main() {
-  http.HandleFunc("/", Handler)
-  err := http.ListenAndServe(fmt.Sprintf(":%d", PORT), nil)
+	in := make(chan string)
 
-  if err != nil {
-    log.Fatal("ListenAndServe: ", err)
-  }
+	go PushData(in)
 
-  fmt.Printf("Starting web server on port %d", PORT)
+	handler := CreateGetHandler(in)
+
+	http.HandleFunc("/", handler)
+
+	err := http.ListenAndServe(fmt.Sprintf(":%d", PORT), nil)
+
+	if err != nil {
+		log.Fatal("ListenAndServe: ", err)
+	}
+
+	fmt.Printf("Starting web server on port %d", PORT)
 }
