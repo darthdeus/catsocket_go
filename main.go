@@ -9,12 +9,18 @@ import (
 	"time"
 )
 
-func CreateGetHandler(in chan string, c *redis.Conn) http.HandlerFunc {
+func CreateGetHandler(in chan string, c redis.Conn) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		reply, _ := redis.String((*c).Do("GET", "foo"))
+		reply, _ := redis.Values(c.Do("ZRANGEBYSCORE", "foo", 0, 1e6))
 
 		<-in
-		io.WriteString(w, reply)
+
+		for _, item := range reply {
+			text := string(item.([]byte))
+			// text, _ := redis.String(item, nil)
+			fmt.Printf("%s", text)
+			io.WriteString(w, string(text))
+		}
 	}
 }
 
@@ -41,12 +47,12 @@ func main() {
 
 	go PushData(in)
 
-	handler := CreateGetHandler(in, &c)
+	handler := CreateGetHandler(in, c)
+
+	fmt.Printf("Starting web server on port %d", PORT)
 
 	http.HandleFunc("/", handler)
 	httpErr := http.ListenAndServe(fmt.Sprintf(":%d", PORT), nil)
 
 	check(httpErr)
-
-	fmt.Printf("Starting web server on port %d", PORT)
 }
