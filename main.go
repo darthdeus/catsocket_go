@@ -4,6 +4,7 @@ import (
   "fmt"
   "net/http"
   "io"
+  "log"
 )
 
 func Handler(w http.ResponseWriter, req *http.Request) {
@@ -14,7 +15,11 @@ const PORT = 5000
 
 func main() {
   http.HandleFunc("/", Handler)
-  http.ListenAndServe(fmt.Sprintf(":%d", PORT), nil)
+  err := http.ListenAndServe(fmt.Sprintf(":%d", PORT), nil)
+
+  if err != nil {
+    log.Fatal("ListenAndServe: ", err)
+  }
 
   fmt.Printf("Starting web server on port %d", PORT)
 }
