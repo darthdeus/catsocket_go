@@ -1,6 +1,7 @@
 package main
 
 import (
+  _ "net/http/pprof"
 	"fmt"
 	"github.com/garyburd/redigo/redis"
 	"io"
@@ -23,11 +24,13 @@ func pollDataSource(w http.ResponseWriter, c redis.Conn) {
 func CreateGetHandler(in chan string, c redis.Conn) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 
-		for i := 0; i < 5; i += 1 {
-			pollDataSource(w, c)
-			time.Sleep(500 * time.Millisecond)
-		}
-	}
+    go func() {
+      for i := 0; i < 5; i += 1 {
+        pollDataSource(w, c)
+        time.Sleep(1 * time.Millisecond)
+      }
+    }()
+  }
 }
 
 func PushData(in chan<- string) {
