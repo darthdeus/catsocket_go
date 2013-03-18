@@ -21,7 +21,7 @@ func pollDataSource(w http.ResponseWriter, c redis.Conn) {
 	}
 }
 
-func CreateGetHandler(in chan string, c redis.Conn) http.HandlerFunc {
+func createGetHandler(c redis.Conn) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 
     go func() {
@@ -33,17 +33,15 @@ func CreateGetHandler(in chan string, c redis.Conn) http.HandlerFunc {
   }
 }
 
-func PushData(in chan<- string) {
-	for {
-		time.Sleep(time.Second)
-		in <- "randomness"
-	}
+func authorizeKey(apiKey string, c redis.Conn) bool {
+  status, _ := redis.Bool(c.Do("SISMEMBER", "keys", apiKey))
+  return status
 }
 
-func check(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
+func createPublishHandler(c redis.Conn) http.HandlerFunc {
+  return func(w http.ResponseWriter, req *http.Request) {
+    io.WriteString(w, "OK")
+  }
 }
 
 const PORT = 5000
@@ -52,16 +50,21 @@ func main() {
 	c, err := redis.Dial("tcp", ":6379")
 	check(err)
 
-	in := make(chan string)
-
-	go PushData(in)
-
-	handler := CreateGetHandler(in, c)
+  println(authorizeKey("foo", c))
 
 	fmt.Printf("Starting web server on port %d", PORT)
 
-	http.HandleFunc("/", handler)
+	http.HandleFunc("/", createGetHandler(c))
+	http.HandleFunc("/publish", createPublishHandler(c))
+
 	httpErr := http.ListenAndServe(fmt.Sprintf(":%d", PORT), nil)
 
 	check(httpErr)
 }
+
+func check(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
