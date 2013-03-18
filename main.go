@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/gosexy/redis"
+	"github.com/garyburd/redigo/redis"
 	"io"
 	"log"
 	"net/http"
@@ -10,16 +10,18 @@ import (
 	"time"
 )
 
-func pollDataSource(w http.ResponseWriter, c *redis.Client) {
-	reply, _ := c.ZRangeByScore("foo", 0, int(1e9))
+func pollDataSource(w http.ResponseWriter, c redis.Conn) {
+	reply, _ := redis.Values(c.Do("ZRANGEBYSCORE", "foo", 0, int(1e9)))
 
 	for _, item := range reply {
-		fmt.Printf("%s", item)
-		io.WriteString(w, item)
+		// text := string(item.([]byte))
+		text, _ := redis.String(item, nil)
+		fmt.Printf("%s", text)
+		io.WriteString(w, string(text))
 	}
 }
 
-func createGetHandler(c *redis.Client) http.HandlerFunc {
+func createGetHandler(c redis.Conn) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 
 		if req.Method != "GET" {
@@ -37,8 +39,8 @@ func createGetHandler(c *redis.Client) http.HandlerFunc {
 	}
 }
 
-func authorizeKey(apiKey string, c *redis.Client) bool {
-	status, err := c.SIsMember("keys", apiKey)
+func authorizeKey(apiKey string, c redis.Conn) bool {
+	status, err := redis.Bool(c.Do("SISMEMBER", "keys", apiKey))
 
 	if err != nil {
 		panic(err)
@@ -56,8 +58,12 @@ func httpError(w http.ResponseWriter, status int, text string) {
 	fmt.Fprintf(w, "{ \"error\": \"%s\" }\n", text)
 }
 
-func createPublishHandler(c *redis.Client) http.HandlerFunc {
+func createPublishHandler(pool *redis.Pool) http.HandlerFunc {
+
 	return func(w http.ResponseWriter, req *http.Request) {
+    c := pool.Get()
+    defer c.Close()
+
 		data := req.FormValue("data")
 		apiKey := req.FormValue("api_key")
 		channel := req.FormValue("channel")
@@ -67,19 +73,13 @@ func createPublishHandler(c *redis.Client) http.HandlerFunc {
 			return
 		}
 
-		fmt.Printf("checking API key: %s\n", apiKey)
+		// fmt.Printf("checking API key: %s\n", apiKey)
 
 		if authorizeKey(apiKey, c) {
 			key := time.Now().Unix()
 
-			status, err := c.ZAdd(channelName(apiKey, channel), key, data)
-			println(status)
+			c.Do("ZADD", channelName(apiKey, channel), key, data)
 
-			if err != nil {
-				panic(err)
-			}
-
-			println("added")
 			io.WriteString(w, "OK\n")
 		} else {
 			httpError(w, 401, "authentication failed")
@@ -90,15 +90,31 @@ func createPublishHandler(c *redis.Client) http.HandlerFunc {
 const PORT = 5000
 
 func main() {
-	c := redis.New()
-	redisErr := c.Connect("0.0.0.0", 6379)
+  server := "0.0.0.0:6379"
 
-	check(redisErr)
+  pool := &redis.Pool{
+    MaxIdle: 3,
+    IdleTimeout: 240 * time.Second,
+    Dial: func () (redis.Conn, error) {
+      c, err := redis.Dial("tcp", server)
+      if err != nil {
+        return nil, err
+      }
+      return c, err
+    },
+    TestOnBorrow: func(c redis.Conn, t time.Time) error {
+      _, err := c.Do("PING")
+      return err
+    },
+  }
+
+	// c, redisErr := redis.Dial("tcp", ":6379")
+	// check(redisErr)
 
 	fmt.Printf("Starting web server on port %d\n", PORT)
 
-	http.HandleFunc("/", createGetHandler(c))
-	http.HandleFunc("/publish", createPublishHandler(c))
+	http.HandleFunc("/publish", createPublishHandler(pool))
+	// http.HandleFunc("/", createGetHandler(pool))
 
 	httpErr := http.ListenAndServe(fmt.Sprintf(":%d", PORT), nil)
 
