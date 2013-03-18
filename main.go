@@ -24,6 +24,12 @@ func pollDataSource(w http.ResponseWriter, c redis.Conn) {
 func createGetHandler(c redis.Conn) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 
+    if req.Method != "GET" {
+      io.WriteString(w, "{ \"error\": \"Poll only supports GET\" }")
+      w.WriteHeader(400)
+      return
+    }
+
     go func() {
       for i := 0; i < 5; i += 1 {
         pollDataSource(w, c)
@@ -40,6 +46,8 @@ func authorizeKey(apiKey string, c redis.Conn) bool {
 
 func createPublishHandler(c redis.Conn) http.HandlerFunc {
   return func(w http.ResponseWriter, req *http.Request) {
+
+    w.WriteHeader(401)
     io.WriteString(w, "OK")
   }
 }
