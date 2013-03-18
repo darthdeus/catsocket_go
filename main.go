@@ -40,24 +40,46 @@ func createGetHandler(c redis.Conn) http.HandlerFunc {
 }
 
 func authorizeKey(apiKey string, c redis.Conn) bool {
-	status, _ := redis.Bool(c.Do("SISMEMBER", "keys", apiKey))
+	status, err := redis.Bool(c.Do("SISMEMBER", "keys", apiKey))
+
+	if err != nil {
+		panic(err)
+	}
+
 	return status
+}
+
+func channelName(apiKey string, name string) string {
+	return apiKey + name
+}
+
+func httpError(w http.ResponseWriter, status int, text string) {
+	w.WriteHeader(status)
+	fmt.Fprintf(w, "{ \"error\": \"%s\" }\n", text)
 }
 
 func createPublishHandler(c redis.Conn) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-    req.ParseForm()
+		data := req.FormValue("data")
+		apiKey := req.FormValue("api_key")
+		channel := req.FormValue("channel")
 
-    apiKey := req.Form["api_key"][0]
+		if apiKey == "" || data == "" || channel == "" {
+			httpError(w, 400, "channel, api_key and data are all required")
+			return
+		}
 
-    fmt.Printf("checking API key: %s\n", apiKey)
+		fmt.Printf("checking API key: %s\n", apiKey)
 
-    if authorizeKey(apiKey, c) {
-      io.WriteString(w, "OK\n")
-    } else {
-      w.WriteHeader(401)
-      io.WriteString(w, "ERROR\n")
-    }
+		if authorizeKey(apiKey, c) {
+			key := time.Now().Unix()
+
+			c.Do("ZADD", channelName(apiKey, channel), key, data)
+
+			io.WriteString(w, "OK\n")
+		} else {
+			httpError(w, 401, "authentication failed")
+		}
 	}
 }
 
