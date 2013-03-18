@@ -2,12 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/garyburd/redigo/redis"
 	"net/http"
 	"time"
 )
 
-func CreatePublishHandler(pool *redis.Pool) http.HandlerFunc {
+func CreatePublishHandler(pool *DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		c := pool.Get()
 		defer c.Close()

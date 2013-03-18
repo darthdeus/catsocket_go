@@ -1,12 +1,11 @@
 package main
 
 import (
-	"github.com/garyburd/redigo/redis"
 	"net/http"
 	"time"
 )
 
-func CreateGetHandler(pool *redis.Pool) http.HandlerFunc {
+func CreateGetHandler(pool *DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		c := pool.Get()
 		defer c.Close()
