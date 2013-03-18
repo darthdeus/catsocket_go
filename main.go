@@ -1,12 +1,12 @@
 package main
 
 import (
-  _ "net/http/pprof"
 	"fmt"
 	"github.com/garyburd/redigo/redis"
 	"io"
 	"log"
 	"net/http"
+	_ "net/http/pprof"
 	"time"
 )
 
@@ -24,32 +24,41 @@ func pollDataSource(w http.ResponseWriter, c redis.Conn) {
 func createGetHandler(c redis.Conn) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 
-    if req.Method != "GET" {
-      io.WriteString(w, "{ \"error\": \"Poll only supports GET\" }")
-      w.WriteHeader(400)
-      return
-    }
+		if req.Method != "GET" {
+			w.WriteHeader(400)
+			io.WriteString(w, "{ \"error\": \"Poll only supports GET\" }")
+			return
+		}
 
-    go func() {
-      for i := 0; i < 5; i += 1 {
-        pollDataSource(w, c)
-        time.Sleep(1 * time.Millisecond)
-      }
-    }()
-  }
+		go func() {
+			for i := 0; i < 5; i += 1 {
+				pollDataSource(w, c)
+				time.Sleep(1)
+			}
+		}()
+	}
 }
 
 func authorizeKey(apiKey string, c redis.Conn) bool {
-  status, _ := redis.Bool(c.Do("SISMEMBER", "keys", apiKey))
-  return status
+	status, _ := redis.Bool(c.Do("SISMEMBER", "keys", apiKey))
+	return status
 }
 
 func createPublishHandler(c redis.Conn) http.HandlerFunc {
-  return func(w http.ResponseWriter, req *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
+    req.ParseForm()
 
-    w.WriteHeader(401)
-    io.WriteString(w, "OK")
-  }
+    apiKey := req.Form["api_key"][0]
+
+    fmt.Printf("checking API key: %s\n", apiKey)
+
+    if authorizeKey(apiKey, c) {
+      io.WriteString(w, "OK\n")
+    } else {
+      w.WriteHeader(401)
+      io.WriteString(w, "ERROR\n")
+    }
+	}
 }
 
 const PORT = 5000
@@ -58,9 +67,7 @@ func main() {
 	c, redisErr := redis.Dial("tcp", ":6379")
 	check(redisErr)
 
-  println(authorizeKey("foo", c))
-
-	fmt.Printf("Starting web server on port %d", PORT)
+	fmt.Printf("Starting web server on port %d\n", PORT)
 
 	http.HandleFunc("/", createGetHandler(c))
 	http.HandleFunc("/publish", createPublishHandler(c))
@@ -75,4 +82,3 @@ func check(err error) {
 		log.Fatal(err)
 	}
 }
-
