@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/garyburd/redigo/redis"
+	"github.com/gosexy/redis"
 	"io"
 	"log"
 	"net/http"
@@ -10,18 +10,16 @@ import (
 	"time"
 )
 
-func pollDataSource(w http.ResponseWriter, c redis.Conn) {
-	reply, _ := redis.Values(c.Do("ZRANGEBYSCORE", "foo", 0, int(1e9)))
+func pollDataSource(w http.ResponseWriter, c *redis.Client) {
+	reply, _ := c.ZRangeByScore("foo", 0, int(1e9))
 
 	for _, item := range reply {
-		// text := string(item.([]byte))
-		text, _ := redis.String(item, nil)
-		fmt.Printf("%s", text)
-		io.WriteString(w, string(text))
+		fmt.Printf("%s", item)
+		io.WriteString(w, item)
 	}
 }
 
-func createGetHandler(c redis.Conn) http.HandlerFunc {
+func createGetHandler(c *redis.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 
 		if req.Method != "GET" {
@@ -39,8 +37,8 @@ func createGetHandler(c redis.Conn) http.HandlerFunc {
 	}
 }
 
-func authorizeKey(apiKey string, c redis.Conn) bool {
-	status, err := redis.Bool(c.Do("SISMEMBER", "keys", apiKey))
+func authorizeKey(apiKey string, c *redis.Client) bool {
+	status, err := c.SIsMember("keys", apiKey)
 
 	if err != nil {
 		panic(err)
@@ -58,7 +56,7 @@ func httpError(w http.ResponseWriter, status int, text string) {
 	fmt.Fprintf(w, "{ \"error\": \"%s\" }\n", text)
 }
 
-func createPublishHandler(c redis.Conn) http.HandlerFunc {
+func createPublishHandler(c *redis.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		data := req.FormValue("data")
 		apiKey := req.FormValue("api_key")
@@ -74,8 +72,14 @@ func createPublishHandler(c redis.Conn) http.HandlerFunc {
 		if authorizeKey(apiKey, c) {
 			key := time.Now().Unix()
 
-			c.Do("ZADD", channelName(apiKey, channel), key, data)
+			status, err := c.ZAdd(channelName(apiKey, channel), key, data)
+			println(status)
 
+			if err != nil {
+				panic(err)
+			}
+
+			println("added")
 			io.WriteString(w, "OK\n")
 		} else {
 			httpError(w, 401, "authentication failed")
@@ -86,7 +90,9 @@ func createPublishHandler(c redis.Conn) http.HandlerFunc {
 const PORT = 5000
 
 func main() {
-	c, redisErr := redis.Dial("tcp", ":6379")
+	c := redis.New()
+	redisErr := c.Connect("0.0.0.0", 6379)
+
 	check(redisErr)
 
 	fmt.Printf("Starting web server on port %d\n", PORT)
