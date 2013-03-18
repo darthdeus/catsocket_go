@@ -47,8 +47,8 @@ func createPublishHandler(c redis.Conn) http.HandlerFunc {
 const PORT = 5000
 
 func main() {
-	c, err := redis.Dial("tcp", ":6379")
-	check(err)
+	c, redisErr := redis.Dial("tcp", ":6379")
+	check(redisErr)
 
   println(authorizeKey("foo", c))
 
