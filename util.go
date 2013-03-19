@@ -15,15 +15,15 @@ func check(err error) {
 	}
 }
 
-func pollDataSource(w http.ResponseWriter, c redis.Conn) {
-	reply, err := redis.Values(c.Do("ZRANGEBYSCORE", "foo", 0, int(1e9)))
+func pollDataSource(w http.ResponseWriter, c DBConnection) {
+	reply, err := c.Poll("foo", int(1e9))
 
 	check(err)
 
 	if len(reply) > 0 {
-		fmt.Fprintf(w, "Got a reply")
+		fmt.Fprintf(w, "Got a reply\n")
 	} else {
-		fmt.Fprintf(w, "Empty reply")
+		fmt.Fprintf(w, "Empty reply\n")
 	}
 
 	for _, item := range reply {
@@ -31,20 +31,6 @@ func pollDataSource(w http.ResponseWriter, c redis.Conn) {
 
 		io.WriteString(w, string(text))
 	}
-}
-
-func authorizeKey(apiKey string, c redis.Conn) bool {
-	status, err := redis.Bool(c.Do("SISMEMBER", "keys", apiKey))
-
-	if err != nil {
-		panic(err)
-	}
-
-	return status
-}
-
-func ChannelName(apiKey string, name string) string {
-	return apiKey + name
 }
 
 func httpError(w http.ResponseWriter, status int, text string) {
@@ -59,7 +45,7 @@ type Item struct {
 	Channel string
 }
 
-func ParseRequest(w http.ResponseWriter, req *http.Request, c redis.Conn) Item {
+func ParseRequest(w http.ResponseWriter, req *http.Request, c Connection) Item {
 	data := req.FormValue("data")
 	apiKey := req.FormValue("api_key")
 	channel := req.FormValue("channel")
@@ -72,9 +58,7 @@ func ParseRequest(w http.ResponseWriter, req *http.Request, c redis.Conn) Item {
 		return invalid
 	}
 
-	// fmt.Printf("checking API key: %s\n", apiKey)
-
-	if authorizeKey(apiKey, c) {
+	if c.AuthorizeKey(apiKey) {
 		return Item{true, data, apiKey, channel}
 	}
 

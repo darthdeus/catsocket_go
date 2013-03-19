@@ -11,9 +11,8 @@ func CreateGetHandler(pool *DB) http.HandlerFunc {
 		defer c.Close()
 
 		for i := 0; i < 5; i += 1 {
-			println("polling data")
 			pollDataSource(w, c)
-			time.Sleep(time.Second)
+			time.Sleep(time.Millisecond)
 		}
 	}
 }
