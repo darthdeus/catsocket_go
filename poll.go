@@ -11,7 +11,7 @@ func CreateGetHandler(pool *DB) http.HandlerFunc {
 		c := pool.Get()
 		defer c.Close()
 
-		output, _ := pollDataSource(w, c)
+    output, _ := c.Subscribe("channel")
 
 		select {
 		case data := <-output:

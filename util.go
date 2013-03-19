@@ -16,40 +16,6 @@ func check(err error) {
 	}
 }
 
-func pollDataSource(w http.ResponseWriter, c DBConnection) (output chan string, timeout chan bool) {
-	reply, err := c.Poll("foo", int(1e9))
-
-	// TODO - this should actually just return a channel and the connection
-	// should block on it until there is some data. That way we can easily
-	// multiplex connections onto a few channels and re-broadcast them.
-	// Maybe even return a struct containing the response and the channel?
-
-	output = make(chan string)
-	timeout = make(chan bool)
-
-	go func() {
-		// TODO - the actual implementation goes here
-		time.Sleep(time.Millisecond * 20)
-		output <- "john"
-	}()
-
-	check(err)
-
-	if len(reply) > 0 {
-		fmt.Fprintf(w, "Got a reply\n")
-	} else {
-		fmt.Fprintf(w, "Empty reply\n")
-	}
-
-	for _, item := range reply {
-		text, _ := redis.String(item, nil)
-
-		io.WriteString(w, string(text))
-	}
-
-	return
-}
-
 func httpError(w http.ResponseWriter, status int, text string) {
 	w.WriteHeader(status)
 	fmt.Fprintf(w, "{ \"error\": \"%s\" }\n", text)
