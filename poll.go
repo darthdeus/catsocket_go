@@ -10,11 +10,10 @@ func CreateGetHandler(pool *DB) http.HandlerFunc {
 		c := pool.Get()
 		defer c.Close()
 
-		go func() {
-			for i := 0; i < 5; i += 1 {
-				pollDataSource(w, c)
-				time.Sleep(1)
-			}
-		}()
+		for i := 0; i < 5; i += 1 {
+			println("polling data")
+			pollDataSource(w, c)
+			time.Sleep(time.Second)
+		}
 	}
 }
