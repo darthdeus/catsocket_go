@@ -15,19 +15,20 @@ type Message struct {
 func CreateGetHandler(pool *DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		c := pool.Get()
-		defer c.Close()
 
 		output := c.Subscribe("channel")
 
-		select {
-		case data := <-output:
+    data := <-output
+
+    if data == nil {
+      fmt.Fprint(w, "{}\n")
+    } else {
       payload := Message{time.Now().Unix(), data}
 
       bytes, _ := json.Marshal(payload)
 
-			fmt.Fprintf(w, "%s\n", bytes)
-		case <-time.After(time.Second):
-			fmt.Fprint(w, "{}\n")
-		}
-	}
+      fmt.Fprintf(w, "%s\n", bytes)
+    }
+
+  }
 }

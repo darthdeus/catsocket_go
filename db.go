@@ -50,13 +50,23 @@ func (c DBConnection) Subscribe(channelName string) (output chan []string) {
   output = make(chan []string)
 
   go func() {
+		defer func() {
+      err := c.Close()
+      check(err)
+    }()
+
     for i := 0; i < 5; i += 1 {
-      response := c.pollDataSource("foo")
+      response := c.pollDataSource("foo2")
 
       if len(response) > 0 {
         output <- response
+        return
       }
+
+      time.Sleep(time.Millisecond * 200)
     }
+
+    output <- nil
   }()
 
   return
