@@ -34,7 +34,7 @@ func (c DBConnection) AuthorizeKey(apiKey string) bool {
 }
 
 func (c DBConnection) Poll(channel string, score int) ([]interface{}, error) {
-	reply, err := redis.Values(c.Do("ZRANGEBYSCORE", channel, 0, score))
+	reply, err := redis.Values(c.Do("ZRANGEBYSCORE", channel, score, int(1e9)))
 
   return reply, err
 }
@@ -46,36 +46,40 @@ func (c DBConnection) PushData(data *RequestData) error {
   return err
 }
 
-func (c DBConnection) Subscribe(chanel string) {
+func (c DBConnection) Subscribe(channelName string) (output chan []string) {
+  output = make(chan []string)
+
+  go func() {
+    for i := 0; i < 5; i += 1 {
+      response := c.pollDataSource("foo")
+
+      if len(response) > 0 {
+        output <- response
+      }
+    }
+  }()
+
+  return
 }
 
-func pollDataSource(w http.ResponseWriter, c DBConnection) (output chan string, timeout chan bool) {
-	reply, err := c.Poll("foo", int(1e9))
+func (c DBConnection) pollDataSource(channelName string) []string {
+	reply, err := c.Poll(channelName, 0)
+
+	check(err)
 
 	// TODO - this should actually just return a channel and the connection
 	// should block on it until there is some data. That way we can easily
 	// multiplex connections onto a few channels and re-broadcast them.
 	// Maybe even return a struct containing the response and the channel?
 
-	output = make(chan string)
-	timeout = make(chan bool)
+  result := []string{}
 
-	go func() {
-		// TODO - the actual implementation goes here
-		time.Sleep(time.Millisecond * 20)
-		output <- "john"
-	}()
-
-	check(err)
-
-  // TODO - buffer this instead and send it to the channel at once
 	for _, item := range reply {
 		text, _ := redis.String(item, nil)
-
-		io.WriteString(w, string(text))
+    result = append(result, text)
 	}
 
-	return
+	return result
 }
 
 func ChannelName(apiKey string, name string) string {
@@ -96,10 +100,10 @@ func CreateConnection() DB {
       }
       return c, err
     },
-    TestOnBorrow: func(c redis.Conn, t time.Time) error {
-      _, err := c.Do("PING")
-      return err
-    },
+    // TestOnBorrow: func(c redis.Conn, t time.Time) error {
+    //   _, err := c.Do("PING")
+    //   return err
+    // },
   }
 
   return DB{pool}

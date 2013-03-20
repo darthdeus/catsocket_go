@@ -2,12 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/garyburd/redigo/redis"
-	"io"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
-	"time"
 )
 
 func check(err error) {
