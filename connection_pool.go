@@ -16,14 +16,12 @@ func (pool ConnectionPool) Get() Connection {
 }
 
 func CreateConnectionPool() ConnectionPool {
-	server := "0.0.0.0:6379"
-
 	pool := &redis.Pool{
 		MaxIdle:     3,
 		IdleTimeout: 240 * time.Second,
 
 		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", server)
+      c, err := redis.Dial("tcp", "0.0.0.0:6379")
 			if err != nil {
 				return nil, err
 			}

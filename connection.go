@@ -10,7 +10,7 @@ type Connection struct {
 }
 
 // Authorize API key against the database
-func (c Connection) AuthorizeKey(apiKey string) bool {
+func (c Connection) Authorize(apiKey string) bool {
 	status, err := redis.Bool(c.Do("SISMEMBER", "keys", apiKey))
 
 	if err != nil {

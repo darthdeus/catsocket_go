@@ -1,20 +1,21 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 )
 
 // HTTP Handler for the main server
 type CatsocketHandler struct {
-	AuthService   *ConnectionPool
+  ConnectionPool *ConnectionPool
 	PubSubService PubSubService
 }
 
 // Handler constructor
 func NewCatsocketHandler(pool *ConnectionPool) CatsocketHandler {
 	handler := CatsocketHandler{}
-	handler.AuthService = pool
+  handler.ConnectionPool = pool
 	handler.PubSubService = PubSubService{}
 
 	return handler
@@ -23,11 +24,17 @@ func NewCatsocketHandler(pool *ConnectionPool) CatsocketHandler {
 // Basic routing
 func (handler CatsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	params := parse(r)
+  connection := handler.ConnectionPool.Get()
+
+  if !connection.Authorize(params.ApiKey) {
+    fmt.Fprint(w, "Unauthorized access", 401)
+
+  }
 
 	if r.Method == "GET" {
-		handler.PubSubService.Subscribe(w, params)
+		handler.PubSubService.Subscribe(w, params, connection)
 	} else if r.Method == "POST" {
-		handler.PubSubService.Publish(w, params)
+		handler.PubSubService.Publish(w, params, connection)
 	} else {
 		panic("Invalid HTTP method")
 	}

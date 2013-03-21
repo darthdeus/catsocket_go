@@ -53,8 +53,10 @@ type PubSubService struct {
 	*ConnectionPool
 }
 
-func (pubsub PubSubService) Subscribe(w http.ResponseWriter, params Params) {
+func (pubsub PubSubService) Subscribe(w http.ResponseWriter, params Params, db Connection) {
+  fmt.Fprint(w, "sub");
 }
 
-func (pubsub PubSubService) Publish(w http.ResponseWriter, params Params) {
+func (pubsub PubSubService) Publish(w http.ResponseWriter, params Params, db Connection) {
+  fmt.Fprint(w, "pub");
 }
