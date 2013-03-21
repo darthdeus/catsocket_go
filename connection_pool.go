@@ -7,12 +7,12 @@ import (
 
 // Redis connection pool wrapper
 type ConnectionPool struct {
-	*redis.Pool
+	RedisPool *redis.Pool
 }
 
 // Returns a single connection from the pool
 func (pool ConnectionPool) Get() Connection {
-	return Connection{pool.Get()}
+	return Connection{pool.RedisPool.Get()}
 }
 
 func CreateConnectionPool() ConnectionPool {
