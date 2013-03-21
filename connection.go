@@ -10,7 +10,7 @@ type Connection struct {
 }
 
 // Authorize API key against the database
-func (c Connection) AuthorizeKey(apiKey string) bool {
+func (c Connection) Authorize(apiKey string) bool {
 	status, err := redis.Bool(c.Do("SISMEMBER", "keys", apiKey))
 
 	if err != nil {
@@ -26,9 +26,13 @@ func (c Connection) Poll(channel string, score int) ([]interface{}, error) {
 	return reply, err
 }
 
-func (c Connection) PushData(data *RequestData) error {
+func (c Connection) PushData(data Params) error {
 	key := time.Now().Unix()
-	_, err := c.Do("ZADD", ChannelName(data.ApiKey, data.Channel), key, data.Data)
+	_, err := c.Do("ZADD", ChannelName(data.apiKey, data.channel), key, data.data)
+
+  if err != nil {
+    panic(err)
+  }
 
 	return err
 }

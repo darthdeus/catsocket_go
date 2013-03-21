@@ -37,7 +37,7 @@ func ParseRequest(w http.ResponseWriter, req *http.Request, c Connection) Reques
 		return invalid
 	}
 
-	if c.AuthorizeKey(apiKey) {
+	if c.Authorize(apiKey) {
 		return RequestData{true, data, apiKey, channel}
 	}
 
