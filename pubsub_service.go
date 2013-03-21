@@ -7,37 +7,12 @@ import (
 	"time"
 )
 
-
 type Message struct {
 	Timestamp int64    `json:"timestamp"`
 	Data      []string `json:"data"`
 }
 
-type SubscriptionService interface {
-	Subscribe(channel string) chan string
-}
-
-type PubSubService struct {
-  ConnectionPool *DB
-}
-
-func (pubsub PubSubService) Subscribe(w http.ResponseWriter, r *http.Request) {
-}
-
-func (pubsub PubSubService) Publish(w http.ResponseWriter, r *http.Request) {
-}
-
-func (pubsub PubSubService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-  if r.Method == "GET" {
-    pubsub.Subscribe(w, r)
-  } else if r.Method == "POST" {
-    pubsub.Publish(w, r)
-  } else {
-    panic("Invalid HTTP method")
-  }
-}
-
-func CreatePublishHandler(pool *DB) http.HandlerFunc {
+func CreatePublishHandler(pool *ConnectionPool) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		c := pool.Get()
 		defer c.Close()
@@ -49,7 +24,7 @@ func CreatePublishHandler(pool *DB) http.HandlerFunc {
 	}
 }
 
-func CreateGetHandler(pool *DB) http.HandlerFunc {
+func CreateGetHandler(pool *ConnectionPool) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		c := pool.Get()
 
@@ -68,4 +43,18 @@ func CreateGetHandler(pool *DB) http.HandlerFunc {
 		}
 
 	}
+}
+
+type SubscriptionService interface {
+	Subscribe(channel string) chan string
+}
+
+type PubSubService struct {
+	*ConnectionPool
+}
+
+func (pubsub PubSubService) Subscribe(w http.ResponseWriter, params Params) {
+}
+
+func (pubsub PubSubService) Publish(w http.ResponseWriter, params Params) {
 }
