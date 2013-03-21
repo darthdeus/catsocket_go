@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"encoding/json"
 	"net/http"
+	"time"
 )
 
 type Message struct {
@@ -50,22 +52,46 @@ type PubSubService struct {
 	*ConnectionPool
 }
 
-func (pubsub PubSubService) Subscribe(w http.ResponseWriter, params Params) {
-	fmt.Fprint(w, "sub\n")
-}
 
-func valid(params Params) bool {
+func validSubscribe(params Params) bool {
 	return params.channel != "" &&
 		params.timestamp != 0 &&
+		params.apiKey != ""
+}
+
+func (pubsub PubSubService) Subscribe(w http.ResponseWriter, params Params, db Connection) {
+	if !validPublish(params) {
+		errorResponse(w, 422, "channel, timestamp and api_key are required")
+		return
+	}
+
+	output := db.Subscribe(params.channel)
+
+	data := <-output
+
+	if data == nil {
+		fmt.Fprint(w, "{}\n")
+	} else {
+		payload := Message{time.Now().Unix(), data}
+
+		bytes, _ := json.Marshal(payload)
+
+		fmt.Fprint(w, "%s\n", bytes)
+	}
+}
+
+func validPublish(params Params) bool {
+	return params.channel != "" &&
 		params.apiKey != "" &&
 		params.data != ""
 }
 
 func (pubsub PubSubService) Publish(w http.ResponseWriter, params Params, db Connection) {
-	if !valid(params) {
-		errorResponse(w, 422, "channel, data, api_key and timestamp are all required")
-	} else {
-		w.WriteHeader(200)
-		db.PushData(params)
+	if !validPublish(params) {
+		errorResponse(w, 422, "channel, data and api_key are required")
+		return
 	}
+
+	w.WriteHeader(200)
+	db.PushData(params)
 }

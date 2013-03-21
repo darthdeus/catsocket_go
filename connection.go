@@ -30,9 +30,9 @@ func (c Connection) PushData(data Params) error {
 	key := time.Now().Unix()
 	_, err := c.Do("ZADD", ChannelName(data.apiKey, data.channel), key, data.data)
 
-  if err != nil {
-    panic(err)
-  }
+	if err != nil {
+		panic(err)
+	}
 
 	return err
 }
@@ -47,7 +47,7 @@ func (c Connection) Subscribe(channelName string) (output chan []string) {
 		}()
 
 		for i := 0; i < 5; i += 1 {
-			response := c.pollDataSource("foo2")
+			response := c.pollDataSource(channelName)
 
 			if len(response) > 0 {
 				output <- response
