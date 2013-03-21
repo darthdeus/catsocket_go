@@ -8,15 +8,18 @@ import (
 
 const PORT = 5000
 
+type CatsocketHandler struct {
+  Pool *DB
+}
+
 func main() {
-	pool := CreateConnection()
+	pool := ConnectionPool()
 
 	fmt.Printf("Starting web server on port %d\n", PORT)
 
-	http.HandleFunc("/publish", CreatePublishHandler(&pool))
-	http.HandleFunc("/", CreateGetHandler(&pool))
+  mine := PubSubService{&pool}
 
-	httpErr := http.ListenAndServe(fmt.Sprintf(":%d", PORT), nil)
+  httpErr := http.ListenAndServe(fmt.Sprintf(":%d", PORT), mine)
 
 	check(httpErr)
 }

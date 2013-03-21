@@ -97,7 +97,7 @@ func ChannelName(apiKey string, name string) string {
 }
 
 
-func CreateConnection() DB {
+func ConnectionPool() DB {
   server := "0.0.0.0:6379"
 
   pool := &redis.Pool{
