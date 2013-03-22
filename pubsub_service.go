@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -12,38 +12,6 @@ type Message struct {
 	Data      []string `json:"data"`
 }
 
-// func CreatePublishHandler(pool *ConnectionPool) http.HandlerFunc {
-// 	return func(w http.ResponseWriter, req *http.Request) {
-// 		c := pool.Get()
-// 		defer c.Close()
-//
-// 		if data := ParseRequest(w, req, c); data.Valid {
-// 			c.PushData(data)
-// 			fmt.Fprint(w, "OK\n")
-// 		}
-// 	}
-// }
-
-// func CreateGetHandler(pool *ConnectionPool) http.HandlerFunc {
-// 	return func(w http.ResponseWriter, req *http.Request) {
-// 		c := pool.Get()
-//
-// 		output := c.Subscribe("channel")
-//
-// 		data := <-output
-//
-// 		if data == nil {
-// 			fmt.Fprint(w, "{}\n")
-// 		} else {
-// 			payload := Message{time.Now().Unix(), data}
-//
-// 			bytes, _ := json.Marshal(payload)
-//
-// 			fmt.Fprintf(w, "%s\n", bytes)
-// 		}
-// 	}
-// }
-
 type SubscriptionService interface {
 	Subscribe(channel string) chan string
 }
@@ -52,7 +20,6 @@ type PubSubService struct {
 	*ConnectionPool
 }
 
-
 func validSubscribe(params Params) bool {
 	return params.channel != "" &&
 		params.timestamp != 0 &&
@@ -60,12 +27,12 @@ func validSubscribe(params Params) bool {
 }
 
 func (pubsub PubSubService) Subscribe(w http.ResponseWriter, params Params, db Connection) {
-	if !validPublish(params) {
+	if !validSubscribe(params) {
 		errorResponse(w, 422, "channel, timestamp and api_key are required")
 		return
 	}
 
-	output := db.Subscribe(params.channel)
+	output := db.Subscribe(ComputeChannelName(params.apiKey, params.channel))
 
 	data := <-output
 
@@ -76,7 +43,7 @@ func (pubsub PubSubService) Subscribe(w http.ResponseWriter, params Params, db C
 
 		bytes, _ := json.Marshal(payload)
 
-		fmt.Fprint(w, "%s\n", bytes)
+		fmt.Fprintf(w, "%s\n", bytes)
 	}
 }
 

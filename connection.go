@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha1"
+	"fmt"
 	"github.com/garyburd/redigo/redis"
 	"time"
 )
@@ -21,14 +23,14 @@ func (c Connection) Authorize(apiKey string) bool {
 }
 
 func (c Connection) Poll(channel string, score int) ([]interface{}, error) {
-	reply, err := redis.Values(c.Do("ZRANGEBYSCORE", channel, score, int(1e9)))
+	reply, err := redis.Values(c.Do("ZRANGEBYSCORE", channel, score, int(2e9)))
 
 	return reply, err
 }
 
 func (c Connection) PushData(data Params) error {
 	key := time.Now().Unix()
-	_, err := c.Do("ZADD", ChannelName(data.apiKey, data.channel), key, data.data)
+	_, err := c.Do("ZADD", ComputeChannelName(data.apiKey, data.channel), key, data.data)
 
 	if err != nil {
 		panic(err)
@@ -83,6 +85,7 @@ func (c Connection) pollDataSource(channelName string) []string {
 	return result
 }
 
-func ChannelName(apiKey string, name string) string {
-	return apiKey + name
+func ComputeChannelName(apiKey string, name string) string {
+	hash := sha1.New()
+	return fmt.Sprintf("%x", hash.Sum([]byte(apiKey + name)))
 }
