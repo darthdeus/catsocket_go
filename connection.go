@@ -28,9 +28,12 @@ func (c Connection) Poll(channel string, score int) ([]interface{}, error) {
 	return reply, err
 }
 
-func (c Connection) PushData(data Params) error {
+func (c Connection) PushData(params Params) error {
 	key := time.Now().Unix()
-	_, err := c.Do("ZADD", ComputeChannelName(data.apiKey, data.channel), key, data.data)
+
+	payload := fmt.Sprintf("%s|%s", params.guid, params.data)
+
+	_, err := c.Do("ZADD", ComputeChannelName(params.apiKey, params.channel), key, payload)
 
 	if err != nil {
 		panic(err)
@@ -87,5 +90,5 @@ func (c Connection) pollDataSource(channelName string) []string {
 
 func ComputeChannelName(apiKey string, name string) string {
 	hash := sha1.New()
-	return fmt.Sprintf("%x", hash.Sum([]byte(apiKey + name)))
+	return fmt.Sprintf("%x", hash.Sum([]byte(apiKey+name)))
 }

@@ -21,7 +21,7 @@ func CreateConnectionPool() ConnectionPool {
 		IdleTimeout: 240 * time.Second,
 
 		Dial: func() (redis.Conn, error) {
-      c, err := redis.Dial("tcp", "0.0.0.0:6379")
+			c, err := redis.Dial("tcp", "0.0.0.0:6379")
 			if err != nil {
 				return nil, err
 			}

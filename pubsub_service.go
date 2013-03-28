@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -23,23 +24,32 @@ type PubSubService struct {
 func validSubscribe(params Params) bool {
 	return params.channel != "" &&
 		params.timestamp != 0 &&
-		params.apiKey != ""
+		params.apiKey != "" &&
+		params.guid != ""
 }
 
 func (pubsub PubSubService) Subscribe(w http.ResponseWriter, params Params, db Connection) {
 	if !validSubscribe(params) {
-		errorResponse(w, 422, "channel, timestamp and api_key are required")
+		errorResponse(w, 422, "channel, timestamp, guid and api_key are required")
 		return
 	}
 
 	output := db.Subscribe(ComputeChannelName(params.apiKey, params.channel))
 
-	data := <-output
+	messages := <-output
 
-	if data == nil {
+	if messages == nil {
 		fmt.Fprint(w, "{}\n")
 	} else {
-		payload := Message{time.Now().Unix(), data}
+		matched := []string{}
+
+		for _, item := range messages {
+			if split := bytes.Split([]byte(item), []byte("|")); string(split[0]) != params.guid {
+				matched = append(matched, string(split[1]))
+			}
+		}
+
+		payload := Message{time.Now().Unix(), matched}
 
 		bytes, _ := json.Marshal(payload)
 
@@ -50,12 +60,13 @@ func (pubsub PubSubService) Subscribe(w http.ResponseWriter, params Params, db C
 func validPublish(params Params) bool {
 	return params.channel != "" &&
 		params.apiKey != "" &&
-		params.data != ""
+		params.data != "" &&
+		params.guid != ""
 }
 
 func (pubsub PubSubService) Publish(w http.ResponseWriter, params Params, db Connection) {
 	if !validPublish(params) {
-		errorResponse(w, 422, "channel, data and api_key are required")
+		errorResponse(w, 422, "channel, data, guid and api_key are required")
 		return
 	}
 

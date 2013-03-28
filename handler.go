@@ -53,6 +53,7 @@ type Params struct {
 	channel   string
 	data      string
 	apiKey    string
+	guid      string
 	timestamp int
 }
 
@@ -61,6 +62,7 @@ func parse(r *http.Request) Params {
 	params.apiKey = r.FormValue("api_key")
 	params.channel = r.FormValue("channel")
 	params.data = r.FormValue("data")
+	params.guid = r.FormValue("guid")
 	params.timestamp, _ = strconv.Atoi(r.FormValue("timestamp"))
 
 	return params
