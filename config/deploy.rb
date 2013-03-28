@@ -1,6 +1,6 @@
 set :application, "catsocket_server"
 
-set :repository,  "git@bitbucket.org:darthdeus/catsocket_server.git"
+set :repository,  "git@bitbucket.org:darthdeus/catsocket_go.git"
 set :scm, :git
 
 set :user, "deploy"
@@ -24,5 +24,3 @@ namespace :deploy do
   task :restart do; end
 
 end
-
-after "deploy:create_symlink", "deploy:symlink_shared"
