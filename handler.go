@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 )
 
 // HTTP Handler for the main server
@@ -33,6 +32,9 @@ func (handler CatsocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	connection := handler.ConnectionPool.Get()
 
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*");
+	w.Header().Set("Access-Control-Allow-Headers", "X-Requested-With");
+
 
 	if !connection.Authorize(params.apiKey) {
 		errorResponse(w, 401, "Unauthorized access")
@@ -54,7 +56,7 @@ type Params struct {
 	data      string
 	apiKey    string
 	guid      string
-	timestamp int
+	timestamp string
 }
 
 func parse(r *http.Request) Params {
@@ -63,7 +65,7 @@ func parse(r *http.Request) Params {
 	params.channel = r.FormValue("channel")
 	params.data = r.FormValue("data")
 	params.guid = r.FormValue("guid")
-	params.timestamp, _ = strconv.Atoi(r.FormValue("timestamp"))
+	params.timestamp = r.FormValue("timestamp")
 
 	return params
 }

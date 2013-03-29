@@ -9,7 +9,7 @@ import (
 )
 
 type Message struct {
-	Timestamp int64    `json:"timestamp"`
+	Timestamp int64   `json:"timestamp"`
 	Data      []string `json:"data"`
 }
 
@@ -23,7 +23,7 @@ type PubSubService struct {
 
 func validSubscribe(params Params) bool {
 	return params.channel != "" &&
-		params.timestamp != 0 &&
+		params.timestamp != "" &&
 		params.apiKey != "" &&
 		params.guid != ""
 }
@@ -34,12 +34,12 @@ func (pubsub PubSubService) Subscribe(w http.ResponseWriter, params Params, db C
 		return
 	}
 
-	output := db.Subscribe(ComputeChannelName(params.apiKey, params.channel))
+	output := db.Subscribe(ComputeChannelName(params.apiKey, params.channel), params.timestamp)
 
 	messages := <-output
 
 	if messages == nil {
-		fmt.Fprint(w, "{}\n")
+		fmt.Fprintf(w, "{ \"data\": [], \"timestamp\": \"%s\" }\n", params.timestamp)
 	} else {
 		matched := []string{}
 

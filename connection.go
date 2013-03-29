@@ -22,7 +22,7 @@ func (c Connection) Authorize(apiKey string) bool {
 	return status
 }
 
-func (c Connection) Poll(channel string, score int) ([]interface{}, error) {
+func (c Connection) Poll(channel string, score string) ([]interface{}, error) {
 	reply, err := redis.Values(c.Do("ZRANGEBYSCORE", channel, score, int(2e9)))
 
 	return reply, err
@@ -42,7 +42,7 @@ func (c Connection) PushData(params Params) error {
 	return err
 }
 
-func (c Connection) Subscribe(channelName string) (output chan []string) {
+func (c Connection) Subscribe(channelName string, timestamp string) (output chan []string) {
 	output = make(chan []string)
 
 	go func() {
@@ -52,7 +52,7 @@ func (c Connection) Subscribe(channelName string) (output chan []string) {
 		}()
 
 		for i := 0; i < 5; i += 1 {
-			response := c.pollDataSource(channelName)
+			response := c.pollDataSource(channelName, timestamp)
 
 			if len(response) > 0 {
 				output <- response
@@ -68,8 +68,8 @@ func (c Connection) Subscribe(channelName string) (output chan []string) {
 	return
 }
 
-func (c Connection) pollDataSource(channelName string) []string {
-	reply, err := c.Poll(channelName, 0)
+func (c Connection) pollDataSource(channelName string, timestamp string) []string {
+	reply, err := c.Poll(channelName, timestamp)
 
 	check(err)
 
@@ -90,5 +90,5 @@ func (c Connection) pollDataSource(channelName string) []string {
 
 func ComputeChannelName(apiKey string, name string) string {
 	hash := sha1.New()
-	return fmt.Sprintf("%x", hash.Sum([]byte(apiKey+name)))
+	return fmt.Sprintf("%x", hash.Sum([]byte(apiKey+name)[0:10]))
 }
