@@ -49,7 +49,7 @@ func (pubsub PubSubService) Subscribe(w http.ResponseWriter, params Params, db C
 			}
 		}
 
-		payload := Message{time.Now().Unix(), matched}
+		payload := Message{time.Now().UnixNano() / 1000000, matched}
 
 		bytes, _ := json.Marshal(payload)
 

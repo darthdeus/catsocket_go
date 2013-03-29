@@ -23,13 +23,13 @@ func (c Connection) Authorize(apiKey string) bool {
 }
 
 func (c Connection) Poll(channel string, score string) ([]interface{}, error) {
-	reply, err := redis.Values(c.Do("ZRANGEBYSCORE", channel, score, int(2e9)))
+	reply, err := redis.Values(c.Do("ZRANGEBYSCORE", channel, score, int64(2e12)))
 
 	return reply, err
 }
 
 func (c Connection) PushData(params Params) error {
-	key := time.Now().Unix()
+	key := time.Now().UnixNano() / 1000000
 
 	payload := fmt.Sprintf("%s|%s", params.guid, params.data)
 
