@@ -51,7 +51,7 @@ func (c Connection) Subscribe(channelName string, timestamp string) (output chan
 			check(err)
 		}()
 
-		for i := 0; i < 5; i += 1 {
+		for i := 0; i < 10; i += 1 {
 			response := c.pollDataSource(channelName, timestamp)
 
 			if len(response) > 0 {
@@ -59,7 +59,7 @@ func (c Connection) Subscribe(channelName string, timestamp string) (output chan
 				return
 			}
 
-			time.Sleep(time.Millisecond * 200)
+			time.Sleep(time.Millisecond * 300)
 		}
 
 		output <- nil
