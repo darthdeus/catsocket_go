@@ -90,5 +90,5 @@ func (c Connection) pollDataSource(channelName string, timestamp string) []strin
 
 func ComputeChannelName(apiKey string, name string) string {
 	hash := sha1.New()
-	return fmt.Sprintf("%x", hash.Sum([]byte(apiKey+name)[0:10]))
+	return fmt.Sprintf("%x", hash.Sum([]byte(apiKey+name)))
 }
